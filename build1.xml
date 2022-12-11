@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF8"?>
+<!--project为 根节点，name属性表示项目名，basedir表示项目的根目录，defaul表示默认执行那个target任务-->
+<project name="ant-jmeter-test" default="run" basedir=".">
+    <!--property是一个变量标签，填写 jmeter 所在的目录-->
+    <property name="jmeterPath" value="D:\azrj1\apache-jmeter-5.5\apache-jmeter-5.5"/>
+    <!--填写 jmeter 报告所在的目录-->
+    <property name="jmeterResult" value="D:\azrj1\api\result"/>
+    <!--填写邮箱的 smtp 服务器-->
+    <property name="mailhost" value="smtp.qq.com"/>
+    <!--填写你的邮箱-->
+    <property name="username" value="920422486@qq.com"/>
+    <!--填写邮箱的授权码-->
+    <property name="password" value="jyfoqpeexjjbbfii"/>
+    <!--填写发送的邮箱-->
+    <property name="mailfrom" value="920422486@qq.com"/>
+    <!--填写接收邮件的邮箱-->
+    <property name="mail_to" value="1477956961@qq.com"/>
+    <!--自定义邮件里面的内容-->
+    <property name="mailsubject" value="接口自动化测试报告"/>
+    <!--填写邮箱的端口，163邮箱是25 -->
+    <property name="mail_port" value="587"/>
+    <!--邮件的一个说明，可以自定义-->
+    <property name="message" value="Hello！请查收下，这是我的接口自动化测试报告，如有任何疑问，请联系我，谢谢！"/>
+    <!--    定义时间格式，可以作为一个变量获取，${time}-->
+    <tstamp>
+        <format property="time" pattern="yyyyMMddhhmm" />
+    </tstamp>
+    <property name="jmeter.home" value="${jmeterPath}" />
+    <!--改成 jtl 所在的目录，jmeterpath前面已经填写好了，只需要填写剩余目录-->
+    <property name="jmeter.result.jtl.dir" value="${jmeterResult}/jtl" />
+    <!--改成 html 所在的目录，jmeterpath前面已经填写好了，只需要填写剩余目录-->
+    <property name="jmeter.result.html.dir" value="${jmeterResult}/html" />
+    <property name="htmlReportNameSummary" value="TestReport" />
+    <property name="jmeter.result.jtlName" value="${jmeter.result.jtl.dir}/${htmlReportNameSummary}${time}.jtl" />
+    <property name="jmeter.result.htmlName" value="${jmeter.result.html.dir}/${htmlReportNameSummary}${time}.html" />
+    <!--    target表示任务，name属性表示任务名，用命令行执行任务时可以使用 ant 任务名运行-->
+    <target name="run">
+<!--        <antcall target="test" />-->
+        <antcall target="report" />
+        <antcall target="sendEmail" />
+    </target>
+
+    <!--执行接口测试-->
+<!--    <target name="test">-->
+<!--        echo标签类似println，可以在控制台打印消息-->
+        <echo>执行接口自动化测试</echo>
+<!--        <taskdef name="jmeter" classname="org.programmerplanet.ant.taskdefs.jmeter.JMeterTask" />-->
+<!--        <jmeter jmeterhome="${jmeter.home}" resultlog="${jmeter.result.jtlName}">-->
+<!--            &lt;!&ndash;要执行的测试脚本&ndash;&gt;-->
+<!--            <testplans dir="D:\azrj1\api\script" includes="*.jmx" />-->
+<!--            <property name="jmeter.save.saveservice.output_format" value="xml"/>-->
+<!--        </jmeter>-->
+<!--    </target>-->
+
+    <!--解决报告中NAN字段显示问题-->
+    <path id="xslt.classpath">
+        <fileset dir="${jmeter.home}/lib" includes="xalan-2.7.2.jar"/>
+        <fileset dir="${jmeter.home}/lib" includes="serializer-2.7.2.jar"/>
+    </path>
+
+    <!--生成HTML测试报告-->
+    <target name="report">
+        <echo>生成接口自动测试报告</echo>
+        <tstamp><format property="report.datestamp" pattern="yyyy/MM/dd HH:mm"/></tstamp>
+        <xslt classpathref="xslt.classpath"
+              force="true"
+              in="${jmeter.result.jtlName}"
+              out="${jmeter.result.htmlName}"
+              style="${jmeter.home}/extras/jmeter-results-detail-report_21.xsl"><!-- 该xsl文件可以控制html类型的测试报告的格式，是jmeter自带的-->
+            <param name="dateReport" expression="${report.datestamp}"/>
+        </xslt>
+
+
+        <!--复制图片-->
+        <copy todir="${jmeter.result.html.dir}">
+            <fileset dir="${jmeter.home}/extras">
+                <include name="collapse.png" />
+                <include name="expand.png" />
+            </fileset>
+        </copy>
+    </target>
+    <!--自动发送邮件-->
+    <target name="sendEmail">
+        <echo>发送自动化测试报告</echo>
+        <mail mailhost="${mailhost}"
+              ssl="ture"
+              user="${username}"
+              password="${password}"
+              mailport="${mail_port}"
+              subject="${mailsubject}"
+              messagemimetype="text/html"
+              tolist="${mail_to}">
+            <from address="${mailfrom}" />
+            <attachments>
+                <fileset dir="${jmeter.result.html.dir}">
+                    <include name="${htmlReportNameSummary}${time}.html"/>
+                    <include name="collapse.png" />
+                    <include name="expand.png" />
+                </fileset>
+            </attachments>
+            <message>
+                ${message}
+            </message>
+        </mail>
+    </target>
+</project>
